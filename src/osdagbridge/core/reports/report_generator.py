@@ -744,6 +744,10 @@ def build_report_payload(request, input_dict, output_dict):
                       KEY_TL_TEMP_RISE, KEY_TL_TEMP_FALL):
             if not input_dict.get(_tkey) and output_dict.get(_tkey):
                 input_dict[_tkey] = output_dict[_tkey]
+        # Inject calculated seismic forces into Chapter 3 report inputs.
+        for _skey in ("Feq_X_kN", "Feq_Z_kN", "Feq_Y_kN"):
+            if output_dict.get(_skey) is not None:
+                input_dict[_skey] = output_dict[_skey]
 
         # If still missing, compute from whatever temperature inputs are available.
         if not input_dict.get(KEY_TL_BRIDGE_TEMP_MIN):
