@@ -1960,19 +1960,26 @@ class PlateGirderBridge:
         dead_load_kN = _custom_load(KEY_SL_DEAD_LOAD_MODE, KEY_SL_DEAD_LOAD_VALUE)
         live_load_kN = _custom_load(KEY_SL_LIVE_LOAD_MODE, KEY_SL_LIVE_LOAD_VALUE)
 
-        self.grillage_model.create_seismic_load_cases(
-            z_value=z_value,
-            soil_type=soil_type,
-            importance_factor=importance_factor,
-            damping_percent=damping_pct,
-            response_reduction_factor=R,
-            time_period=time_period,
-            Ah=Ah,
-            Av=Av,
-            dead_load_kN=dead_load_kN,
-            live_load_kN=live_load_kN,
-            partial_safety_factor=1.5,  # IRC:6-2017 Table B.2 seismic ULS
-        )
+        seismic_results = self.grillage_model.create_seismic_load_cases(
+    z_value=z_value,
+    soil_type=soil_type,
+    importance_factor=importance_factor,
+    damping_percent=damping_pct,
+    response_reduction_factor=R,
+    time_period=time_period,
+    Ah=Ah,
+    Av=Av,
+    dead_load_kN=dead_load_kN,
+    live_load_kN=live_load_kN,
+    partial_safety_factor=1.5,
+)
+
+# Store seismic design forces in output_dict for report generation
+self.output_dict.update({
+    "Feq_X_kN": seismic_results["Feq_X_kN"],
+    "Feq_Z_kN": seismic_results["Feq_Z_kN"],
+    "Feq_Y_kN": seismic_results["Feq_Y_kN"],
+})
 
     def vehicle_lane_coordinates(self) -> list:
         """
