@@ -71,6 +71,14 @@ from osdagbridge.core.utils.common import (
 )
 
 from osdagbridge.core.reports.report_utils import _render_value, get_girder_entries, _tex
+def _render_dimension_mm(source_dict, key):
+    value = source_dict.get(key)
+    if value in ("", None):
+        return ""
+    try:
+        return _tex(float(value) * 1000.0) + " mm"
+    except (ValueError, TypeError):
+        return _tex(value) + " mm"
 
 def ch2_input_parameters(m, input_dict, output_dict=None):
     girder_entries = get_girder_entries(input_dict)

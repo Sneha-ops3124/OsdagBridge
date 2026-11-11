@@ -168,7 +168,7 @@ def ch3_loads(input_dict):
     sl_spectral    = input_dict.get(KEY_SL_SPECTRAL_COEFF)
     sl_ah          = input_dict.get(KEY_SL_HORIZONTAL_COEFF)
     sl_av          = input_dict.get(KEY_SL_VERTICAL_COEFF)
-    if not sl_ah or not sl_zone_factor:
+    if any(v in (None, "") for v in (sl_zone_factor, sl_spectral, sl_ah, sl_av)):
         try:
             _zone = input_dict.get(KEY_SL_SEISMIC_ZONE) or input_dict.get('seismic_zone')
             _zmap = {"1": "I", "2": "II", "3": "III", "4": "IV", "5": "V"}
@@ -345,19 +345,19 @@ This section summarizes all loads applied to the bridge and the load combination
 \hline
 \textbf{parameter} & \textbf{value} \\
 \hline
-\textnormal{Seismic Zone} & """ + (_render_value(input_dict,'seismic_zone')) + r""" [from Project Location] \\[6pt]
+\textnormal{Seismic Zone} & """ + (_render_value(input_dict, KEY_SL_SEISMIC_ZONE) or _render_value(input_dict, 'seismic_zone')) + r""" [from Project Location] \\[6pt]
 \hline
-\textnormal{Zone Factor, Z} & """ + (_render_value(input_dict, KEY_SL_ZONE_FACTOR)) + r""" \\[6pt]
+\textnormal{Zone Factor, Z} & """ + (_sl(sl_zone_factor)) + r""" \\[6pt]
 \hline
 \textnormal{Importance Factor, I} & """ + (_render_value(input_dict, KEY_SL_IMPORTANCE_FACTOR)) + r""" \\[6pt]
 \hline
 \textnormal{Type of Soil} & """ + (_render_value(input_dict, KEY_SL_SOIL_TYPE)) + r""" \\[6pt]
 \hline
-\textnormal{Sa/g} & """ + (_render_value(input_dict, KEY_SL_SPECTRAL_COEFF)) + r""" \\[6pt]
+\textnormal{Sa/g} & """ + (_sl(sl_spectral)) + r""" \\[6pt]
 \hline
-\textnormal{Horizontal Seismic Coefficient, Ah} & """ + (_render_value(input_dict, KEY_SL_HORIZONTAL_COEFF)) + r""" \\[6pt]
+\textnormal{Horizontal Seismic Coefficient, Ah} & """ + (_sl(sl_ah)) + r""" \\[6pt]
 \hline
-\textnormal{Vertical Seismic Coefficient, Av} & """ + (_render_value(input_dict, KEY_SL_VERTICAL_COEFF)) + r""" \\[6pt]
+\textnormal{Vertical Seismic Coefficient, Av} & """ + (_sl(sl_av)) + r""" \\[6pt]
 \hline
 \textnormal{Horizontal Seismic Force (longitudinal)} & """ + (_render_value(input_dict, 'Feq_X_kN')) + r""" kN \\[6pt]
 \hline

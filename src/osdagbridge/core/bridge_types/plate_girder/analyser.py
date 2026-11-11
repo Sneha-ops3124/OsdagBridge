@@ -1238,7 +1238,28 @@ class BridgeGrillageModel:
                 Feq_Z_N_per_m2 * trib,   # Fz  (transverse +z)
                 -Feq_Y_N_per_m2 * trib,  # Fy  (vertical, upward = negative)
             )
+        # TEMPORARY SEISMIC DIAGNOSTIC
+        total_node_trib_area = sum(
+            _trib_1d(nox_sorted, spec["coordinate"][0])
+            * _trib_1d(noz_sorted, spec["coordinate"][2])
+            for spec in node_spec.values()
+        )
 
+        sum_fx = sum(v[0] for v in node_forces.values()) / 1000.0
+        sum_fz = sum(v[1] for v in node_forces.values()) / 1000.0
+        sum_fy = sum(v[2] for v in node_forces.values()) / 1000.0
+
+        print("\n===== SEISMIC DIAGNOSTIC =====")
+        print(f"Expected deck area = {total_trib_area:.6f} m2")
+        print(f"Summed node area   = {total_node_trib_area:.6f} m2")
+        print(f"Number of nodes    = {len(node_spec)}")
+        print(f"Sum EQ_X           = {sum_fx:.6f} kN")
+        print(f"Expected EQ_X      = {Feq_X_kN:.6f} kN")
+        print(f"Sum EQ_Z           = {sum_fz:.6f} kN")
+        print(f"Expected EQ_Z      = {Feq_Z_kN:.6f} kN")
+        print(f"Sum EQ_Y           = {sum_fy:.6f} kN")
+        print(f"Expected EQ_Y      = {-Feq_Y_kN:.6f} kN")
+        print("==============================")
         # ── 4. Individual directional load cases ──
         EQ_X = og.create_load_case(name="EQ_X")
         EQ_Z = og.create_load_case(name="EQ_Z")
