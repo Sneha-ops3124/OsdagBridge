@@ -2124,7 +2124,7 @@ class PlateGirderBridge:
             m.analyze(load_case=new_cases)
 
         ds = m.get_results()
-                print("\n========== DEFLECTION DIAGNOSTIC ==========")
+        print("\n========== DEFLECTION DIAGNOSTIC ==========")
         print("Components:", list(ds.coords["Component"].values))
         print("Loadcases:")
         for lc in ds.coords["Loadcase"].values:
