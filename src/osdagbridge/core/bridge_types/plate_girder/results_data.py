@@ -952,30 +952,47 @@ def build_forces_summary(result_handler, load_effects_cache: dict) -> dict:
         }
 
         # ── 3. Reactions — sum Ra and Rb across all interior girders ──
-        left_total  = 0.0
-        right_total = 0.0
+        # 3. Reactions captured directly from OpenSees support nodes
+        model = getattr(result_handler, "model", None)
+        model_results = getattr(model, "results", None)
+        reaction_records = dict(
+            getattr(model_results, "basic_load_case_reactions", {}) or {}
+        )
+        for increment_records in (
+            getattr(model_results, "moving_load_case_reactions", []) or []
+        ):
+            reaction_records.update(increment_records or {})
 
-        for gmap_key in cache_label_to_gmap_key.values():
-            element_map = g_map[gmap_key].get("element_map", [])
-            if not element_map:
-                continue
-            eid_start, n1_start, _ = element_map[0]
-            eid_end,   _,  n2_end  = element_map[-1]
-            try:
-                ra = float(ds.sel(
-                    Loadcase=lc, Element=eid_start, Component="Vy_i"
-                )["forces"]) / 1000.0
-                rb = -float(ds.sel(
-                    Loadcase=lc, Element=eid_end, Component="Vy_j"
-                )["forces"]) / 1000.0
-                left_total  += ra
-                right_total += rb
-            except Exception:
-                pass
-
+        reaction_xyz_records = dict(getattr(model_results, "basic_load_case_reactions_xyz", {}) or {})
+        for increment_records in (getattr(model_results, "moving_load_case_reactions_xyz", []) or []):
+            reaction_xyz_records.update(increment_records or {})
+        group_xyz = reaction_xyz_records.get(lc, {}) or {}
+        sorted_xyz = sorted(group_xyz.items(), key=lambda item: item[0])
+        supports_xyz_kN = {
+            f"Support {index + 1}": {
+                axis: round(float(values.get(axis, 0.0)) / 1000.0, 3)
+                for axis in ("Rx", "Ry", "Rz")
+            }
+            for index, (_, values) in enumerate(sorted_xyz)
+        }
+        group_reactions = reaction_records.get(lc, {}) or {}
+        sorted_reactions = sorted(
+            group_reactions.items(), key=lambda item: item[0]
+        )
+        supports_kN = {
+            f"Support {index + 1}": round(float(value) / 1000.0, 3)
+            for index, (_, value) in enumerate(sorted_reactions)
+        }
+        reaction_values = list(supports_kN.values())
         rxn_summary[lc] = {
-            "left_kN":  round(left_total,  3),
-            "right_kN": round(right_total, 3),
+            "supports_kN": supports_kN,
+            "supports_xyz_kN": supports_xyz_kN,
+            "support_groups_kN": {
+                str(group): round(float(value) / 1000.0, 3)
+                for group, value in sorted_reactions
+            },
+            "left_kN": reaction_values[0] if reaction_values else None,
+            "right_kN": reaction_values[-1] if reaction_values else None,
         }
 
     return {"load_cases": lc_summary, "reactions": rxn_summary}

@@ -2163,6 +2163,7 @@ class OspGrillage:
                 constraint_type=self.constraint_type,
                 load_case=load_case_obj,
                 time_increment=kwargs.get("time_increment", 0.01),
+                support_node_groups=getattr(self.Mesh_obj, "edge_support_nodes", self.Mesh_obj.edge_node_recorder),
             )
             load_case_analysis.add_load_command(load_command, load_factor=load_factor)
             # run the Analysis object, collect results, and store Analysis object in the list for Analysis load case
@@ -2202,6 +2203,7 @@ class OspGrillage:
                         constraint_type=self.constraint_type,
                         load_case=load_case_obj,
                         time_increment=kwargs.get("time_increment", 0.01),
+                support_node_groups=getattr(self.Mesh_obj, "edge_support_nodes", self.Mesh_obj.edge_node_recorder),
                     )
                     incremental_analysis.add_load_command(
                         load_command, load_factor=load_factor
@@ -2811,6 +2813,9 @@ class Analysis:
             dict()
         )  # ditto for global ele force except only for shells
         self.ele_stresses = dict()  # shell stress resultants at Gauss points
+        self.support_node_groups = kwargs.get("support_node_groups", {})
+        self.support_reactions = dict()
+        self.support_reactions_xyz = dict()
         self.mesh_node_counter = node_counter  # set node counter based on current Mesh
         self.mesh_ele_counter = ele_counter  # set ele counter based on current Mesh
         # save deepcopy of load case object
@@ -2924,9 +2929,15 @@ class Analysis:
         self._ops.algorithm("Linear")
         self._ops.analysis(self.analysis_type)
         if self.analysis_type == "Static":
-            self._ops.analyze(int(self.step))
+            analysis_status = self._ops.analyze(int(self.step))
         else:  # Transient
-            self._ops.analyze(int(self.step), self.time_increment)
+            analysis_status = self._ops.analyze(int(self.step), self.time_increment)
+
+        if not self.pyfile and analysis_status != 0:
+            raise RuntimeError(
+                f"OpenSees analysis failed for load case {self.analysis_name!r} "
+                f"with status {analysis_status}."
+            )
 
         # extract results
         self.extract_grillage_responses()
@@ -2947,6 +2958,21 @@ class Analysis:
         :returns: None. Results are stored in the ``global_ele_force`` and ``node_disp`` instance variables.
         """
         if not self.pyfile:
+            if self.support_node_groups:
+                ops.reactions()
+                for node_tag, edge_group_num in self.support_node_groups.items():
+                    reaction = ops.nodeReaction(node_tag)
+                    if reaction and len(reaction) > 1:
+                        self.support_reactions[edge_group_num] = (
+                            self.support_reactions.get(edge_group_num, 0.0)
+                            + float(reaction[1])
+                        )
+                        current = self.support_reactions_xyz.get(edge_group_num, {"Rx": 0.0, "Ry": 0.0, "Rz": 0.0})
+                        current["Rx"] += float(reaction[0])
+                        current["Ry"] += float(reaction[1])
+                        if len(reaction) > 2:
+                            current["Rz"] += float(reaction[2])
+                        self.support_reactions_xyz[edge_group_num] = current
             # first loop extract node displacements
             for node_tag in ops.getNodeTags():
                 disp_list = ops.nodeDisp(node_tag)
@@ -2985,6 +3011,10 @@ class Results:
         self.basic_load_case_record = dict()
         self.basic_load_case_record_global_forces = dict()
         self.basic_load_case_record_stresses = dict()  # shell stress resultants
+        self.basic_load_case_reactions = dict()
+        self.basic_load_case_reactions_xyz = dict()
+        self.moving_load_case_reactions = []
+        self.moving_load_case_reactions_xyz = []
         self.moving_load_case_record = []
         self.moving_load_case_record_global_forces = []
         self.moving_load_counter = 0
@@ -3116,6 +3146,14 @@ class Results:
                 analysis_obj.analysis_name, [node_disp, ele_force_dict, ele_nodes_dict]
             )
 
+            self.basic_load_case_reactions.setdefault(
+                analysis_obj.analysis_name, analysis_obj.support_reactions.copy()
+            )
+            self.basic_load_case_reactions_xyz.setdefault(
+                analysis_obj.analysis_name,
+                {group: values.copy() for group, values in analysis_obj.support_reactions_xyz.items()},
+            )
+
             # repeat to extract global forces instead
             # extract element forces and sort them to according to nodes - summing in the process
             for ele_num, ele_forces in analysis_obj.global_ele_force.items():
@@ -3148,6 +3186,8 @@ class Results:
             inc_load_case_global_force_record = (
                 dict()
             )  # inc_load_case_record but with forces in global
+            inc_load_case_reactions = dict()
+            inc_load_case_reactions_xyz = dict()
 
             for inc_analysis_obj in list_of_inc_analysis:
                 # compile ele forces for each node
@@ -3168,6 +3208,14 @@ class Results:
                     inc_analysis_obj.analysis_name,
                     [node_disp, ele_force_dict, ele_nodes_dict],
                 )
+                inc_load_case_reactions.setdefault(
+                    inc_analysis_obj.analysis_name,
+                    inc_analysis_obj.support_reactions.copy(),
+                )
+                inc_load_case_reactions_xyz.setdefault(
+                    inc_analysis_obj.analysis_name,
+                    {group: values.copy() for group, values in inc_analysis_obj.support_reactions_xyz.items()},
+                )
                 for ele_num, ele_forces in inc_analysis_obj.global_ele_force.items():
                     ele_force_global_dict.update({ele_num: ele_forces})
                 inc_load_case_global_force_record.setdefault(
@@ -3182,6 +3230,8 @@ class Results:
                 )
 
             self.moving_load_case_record.append(inc_load_case_record)
+            self.moving_load_case_reactions.append(inc_load_case_reactions)
+            self.moving_load_case_reactions_xyz.append(inc_load_case_reactions_xyz)
             self.moving_load_case_record_global_forces.append(
                 inc_load_case_global_force_record
             )

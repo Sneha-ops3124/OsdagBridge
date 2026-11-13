@@ -2124,6 +2124,12 @@ class PlateGirderBridge:
             m.analyze(load_case=new_cases)
 
         ds = m.get_results()
+                print("\n========== DEFLECTION DIAGNOSTIC ==========")
+        print("Components:", list(ds.coords["Component"].values))
+        print("Loadcases:")
+        for lc in ds.coords["Loadcase"].values:
+            print(" ", lc)
+        print("===========================================\n")
 
         # Safety net only: with the installed ospgrillage the records are keyed by
         # load-case name, so no duplicate Loadcase labels occur; keep the axis
