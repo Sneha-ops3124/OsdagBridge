@@ -221,8 +221,8 @@ def ch3_loads(input_dict):
     # --- Table 3.7: Load Combinations (dynamically generated from IRC 6) ---
     _LOAD_LABEL_MAP = {
         'dead_load':         'DL',
-        'surfacing':         'SIDL',
         'live_load':         'LL',
+        'surfacing':         'DW',
         'wind_load':         'WL',
         'thermal_load':      'TL',
         'vehicle_collision': 'VC',

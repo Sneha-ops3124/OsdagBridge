@@ -1336,6 +1336,7 @@ class PlateGirderBridge:
         model.create_crash_barrier_load(barrier_load_kN_per_m=barrier_load_kN_m)
         model.create_railing_load(railing_load_kN_per_m=railing_load_kN_m)
         model.create_median_load()
+        model.create_sidl_combination(partial_safety_factor=1.0)
         model.create_dead_load_combination(partial_safety_factor=1.0)
 
     # ─────────────────────────────────────────────────────────────────────────
